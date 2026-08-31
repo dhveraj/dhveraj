@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Patient {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  patientIdentifier     String        @unique @map("patient_identifier")
+  age                   Int
+  gender                String
+  tobaccoHistoryYears   Int           @default(0) @map("tobacco_history_years")
+  primaryHealthCenter   String        @map("primary_health_center")
+  opticalScans          OpticalScan[]
+
+  @@map("patients")
+}
+
+model OpticalScan {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patientId                String   @map("patient_id") @db.Uuid
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  rawImageUrl              String?  @map("raw_image_url")
+  heatmapImageUrl          String?  @map("heatmap_image_url")
+  riskScore                Int      @map("risk_score")
+  fluorescenceLossAreaPct  Decimal  @map("fluorescence_loss_area_pct") @db.Decimal(5, 2)
+  spectralRatio            Decimal  @map("spectral_ratio") @db.Decimal(6, 3)
+  triageStatus             String   @map("triage_status")
+  biopsyMarginRadiusMm     Decimal  @default(0.00) @map("biopsy_margin_radius_mm") @db.Decimal(4, 2)
+  reviewedByOncologist     Boolean  @default(false) @map("reviewed_by_oncologist")
+  patient                  Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId], map: "idx_optical_scans_patient_id")
+  @@index([riskScore(sort: Desc)], map: "idx_optical_scans_risk_score")
+  @@index([createdAt(sort: Desc)], map: "idx_optical_scans_created_at")
+  @@map("optical_scans")
+}
